@@ -1,0 +1,37 @@
+/** Function.php'ye TC Kimlik No Ekle **/
+add_filter( 'woocommerce_checkout_fields' , 'custom_override_checkout_fields' );
+function custom_override_checkout_fields( $fields ) {
+$fields['billing']['shipping_tc'] = array(
+'label' => __('TC Kimlik No', 'woocommerce'),
+'placeholder' => _x('Fatura İçin Gerekli', 'placeholder', 'woocommerce'),
+'required' => true,
+'class' => array('form-row-wide'),
+'clear' => true
+);
+return $fields;
+}
+/** TC Doğrula Fonksiyonu **/
+function isTcKimlik($tc){
+if(strlen($tc) < 11){ return false; }
+if($tc[0] == '0'){ return false; }
+$plus = ($tc[0] + $tc[2] + $tc[4] + $tc[6] + $tc[8]) * 7;
+$minus = $plus - ($tc[1] + $tc[3] + $tc[5] + $tc[7]);
+$mod = $minus % 10;
+if($mod != $tc[9]){ return false; }
+$all = '';
+for($i = 0 ; $i < 10 ; $i++){ $all += $tc[$i]; }
+if($all % 10 != $tc[10]){ return false; }
+return true;
+}
+/**  TC Kimlik Noyu Doğrula **/
+add_action('woocommerce_checkout_process', 'my_custom_checkout_field_process');
+function my_custom_checkout_field_process() {
+$tcno = $_POST['shipping_tc'];
+if(!isTcKimlik($tcno))
+wc_add_notice( __( 'Lütfen Doğru Bir TC Kimlik No Girin.' ), 'error' );
+}
+/** Adminin Sipariş Detayında Fatura Bilgilerinde TC No'yu Görebilmesi İçin**/
+add_action( 'woocommerce_admin_order_data_after_billing_address', 'my_custom_checkout_field_display_admin_order_meta', 10, 1 );
+function my_custom_checkout_field_display_admin_order_meta($order){
+echo '<p><strong>'.__('TC Kimlik No').':</strong> ' . get_post_meta( $order->get_id(), '_shipping_tc', true ) . '</p>';
+}
